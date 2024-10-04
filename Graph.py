@@ -14,8 +14,5 @@ def graph(train_accuracy,test_accuracy,iteration_no,line1,line2,ax):
     line1.set_data(y_values,x1_values)
     line2.set_data(y_values,x2_values)
 
-    ax.relim()
-    ax.autoscale_view()
-
     plt.draw()
-    plt.pause(0.01)
+    plt.pause(0.0001)

@@ -96,6 +96,9 @@ def grad_descent(X,Y,iterations,alpha,hidden_size):
     test_line, = ax.plot([], [], 'b-', label='Test Accuracy')
     ax.legend()
 
+    ax.set_ylim(0,1)
+    ax.set_xlim(0,iterations)
+
     plt.ion()
 
     for i in range(iterations+1):
