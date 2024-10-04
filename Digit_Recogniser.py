@@ -1,5 +1,7 @@
 import pandas
 import numpy as np
+import matplotlib.pyplot as plt
+from Graph import graph
 
 data = pandas.read_csv('train.csv')
 
@@ -7,18 +9,18 @@ data = np.array(data)
 m, n = data.shape
 np.random.shuffle(data) # shuffle before splitting into dev and training sets
 
-data_dev = data[0:1000].T
+data_dev = data[0:100].T
 Y_test = data_dev[0]
 X_test = data_dev[1:n]
 X_test = X_test / 255.
 
-data_train = data[1000:m].T
+data_train = data[100:m].T
 Y_train = data_train[0]
 X_train = data_train[1:n]
 X_train = X_train / 255.
 _,m_train = X_train.shape
 
-def init_params(hidden_size):
+def init_params(hidden_size): # Base
     # Assuming the 0th index of hidden_size is 784, and the final index is 10
     W = [np.random.rand(hidden_size[i],hidden_size[i-1]) - 0.5 for i in range(1,len(hidden_size))]
     b = [np.random.rand(hidden_size[i],1) - 0.5 for i in range(1,len(hidden_size))]
@@ -87,21 +89,104 @@ def get_accuracy(predictions, Y):
 
 def grad_descent(X,Y,iterations,alpha,hidden_size):
     W,b = init_params(hidden_size)
+    num_iter = 0.1 * iterations
+
+    fig,ax = plt.subplots()
+    train_line, = ax.plot([], [], 'r-', label='Train Accuracy')
+    test_line, = ax.plot([], [], 'b-', label='Test Accuracy')
+    ax.legend()
+
+    plt.ion()
 
     for i in range(iterations+1):
         Z,A = Forward_Prop(X,W,b)
         dW,db = Back_Prop(X,Y,A,Z,W,b)
         W,b = Update(W,b,dW,db,alpha)
-        if i % (10) == 0:
+
+        if i % (num_iter) == 0:
             print("Iteration: ", i)
             predictions = get_predictions(A[-1])
-            print(f'Accuracy: {get_accuracy(predictions, Y)}')
+            train_accuracy = get_accuracy(predictions, Y)
+            test_accuracy = ai_test(X_test,Y_test,W,b)
+            print(f'Accuracy: {train_accuracy}')  
+
+            graph(train_accuracy,test_accuracy,i,train_line,test_line,ax)  
+
+    plt.ioff()
+    plt.show()
 
     return W,b
 
 def ai_test(X,Y,W,b):
     _,A = Forward_Prop(X,W,b)
     predictions = get_predictions(A[-1])
-    print(get_accuracy(predictions,Y))
+    return get_accuracy(predictions,Y)
 
-grad_descent(X_train,Y_train,1000,0.1,[784,10,10])
+    #return [item[0] for item in A[-1]]
+
+W,b = grad_descent(X_train,Y_train,500,0.1,[784,10,10])
+"""
+f = np.array([0 if item % 2 == 0 else 1 for item in range(28)] * 28)
+r = ai_test(f,np.array([0]),W,b)
+q = np.array([0] * 784)
+z = ai_test(q,np.array([0]),W,b)
+
+print(r)
+print(z)
+"""
+def display_test_images(X_test):
+    # Check the number of samples in X_test
+    num_samples = X_test.shape[1] if X_test.ndim > 1 else 1  # If X_test has 2 dimensions
+    image_size = 28
+
+    # Create a figure for displaying the images
+    if num_samples == 1:
+        fig, ax = plt.subplots(figsize=(5, 5))
+        image_data = X_test.flatten()  # Flatten to 1D if it’s a single image
+        ax.imshow(image_data.reshape(image_size, image_size), cmap='gray')
+        ax.axis('off')  # Hide axis labels
+        ax.set_title('Test Image', fontsize=16)
+    else:
+        # Create a grid for multiple images
+        num_cols = 10
+        num_rows = (num_samples + num_cols - 1) // num_cols  # Calculate number of rows needed
+        fig, axes = plt.subplots(num_rows, num_cols, figsize=(15, 1.5 * num_rows))
+
+        # If we have only one row, axes is not a list of lists, so we convert it
+        if num_rows == 1:
+            axes = [axes]
+
+        fig.suptitle('Test Images', fontsize=16)
+
+        for i in range(num_samples):
+            # Get the image data and reshape it to 28x28
+            image_data = X_test[:, i].reshape(image_size, image_size)
+
+            # Find the appropriate subplot
+            row, col = divmod(i, num_cols)
+            ax = axes[row][col] if num_rows > 1 else axes[col]
+
+            # Display the image
+            ax.imshow(image_data, cmap='gray')
+            ax.axis('off')  # Hide axis labels
+
+        # Hide any remaining unused subplots
+        for j in range(num_samples, num_rows * num_cols):
+            row, col = divmod(j, num_cols)
+            ax = axes[row][col] if num_rows > 1 else axes[col]
+            ax.axis('off')
+
+    plt.tight_layout()
+    plt.subplots_adjust(top=0.9)  # Adjust to make room for the title
+    plt.show()
+
+
+"""
+W,b = grad_descent(X_train,Y_train,1000 ,0.1,[784,10,10])
+_,A = Forward_Prop(X_test,W,b)
+z = get_predictions(A[-1])
+for i in range(len(z)):
+    print(f'{z[i],Y_test[i]}')
+# Example usage:
+display_test_images(X_test)
+"""

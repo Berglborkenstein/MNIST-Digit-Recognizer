@@ -1,13 +1,7 @@
-# Creates a screen for the user to give the number of hidden layers, the size of each, the learning rate and the number of iterations
-# Once those are acquired, the user is then shown a canvas. 
-# The ai is trained according to the inputs
-# The user then draws on the canvas
-# They are then asked to submit their drawing
-# The drawing is converted into a format that the ai can interpret
-# The ai is then passed the csv drawing and outputs what it thinks the digit is
 import tkinter as tk
 from tkinter import ttk
 from Digit_Recogniser import grad_descent, X_train,Y_train
+from Canvas import canvas
 
 
 root = tk.Tk()
@@ -16,11 +10,16 @@ root.geometry("500x400")
 
 
 def create_layers():
+        
 
     # Clears the frame of any previous entries
     for widget in layers_frame.winfo_children():
         widget.destroy()
-        root.update_idletasks()
+        layers_frame.update_idletasks()
+        
+    for widget in submit_layer.winfo_children():
+        widget.destroy()
+        submit_layer.update_idletasks()
 
     num_layers = hidden_layer_entry.get()
 
@@ -38,8 +37,8 @@ def create_layers():
                 q = ttk.Entry(master = layers_frame)
                 q.pack(pady = 2)
                 layers.append(q)
-            
-        submit_button = ttk.Button(master = root, text = 'Submit', command = pass_on)
+
+        submit_button = ttk.Button(master = submit_layer, text = 'Submit', command = pass_on)
         submit_button.pack()
 
     else:
@@ -49,6 +48,10 @@ def create_layers():
 def valid_iterations():
     iterations_valid = False
 
+    for widget in iterations_error.winfo_children():
+        widget.destroy()
+        iterations_error.update_idletasks()
+
     iterations = iterations_entry.get()
     if not iterations.isdigit():
         error_iterations = ttk.Label(master = iterations_error, text = 'Please enter an integer')
@@ -57,16 +60,17 @@ def valid_iterations():
         error_int_iterations = ttk.Label(master = iterations_error, text = 'Please enter an integer greater than 0')
         error_int_iterations.pack()
     else:
-        for widget in iterations_error.winfo_children():
-            widget.destroy()
-            root.update_idletasks()
         iterations_valid = True
 
     return iterations_valid
 
 def valid_learning():
     learning_valid = False
-    # Learning Rate  
+
+    for widget in learning_error.winfo_children():
+        widget.destroy()
+    learning_error.update_idletasks()
+
     learning_rate = learning_entry.get()
     try:
         learning_rate = float(learning_rate)
@@ -79,29 +83,40 @@ def valid_learning():
         error_neg_learning = ttk.Label(master = learning_error, text = 'The number you enter must be greater than 0')
         error_neg_learning.pack()
     else:
-        for widget in learning_error.winfo_children():
-            widget.destroy()
-            root.update_idletasks()
         learning_valid = True
     
     return learning_valid
 
+
 def valid_layers():
     layers_valid = True
-    # Layers
-    layers_values = [layer.get() for layer in layers]
-    for item in layers_values:
-        if not item.isdigit() or int(item) <= 0:
-            layers_valid = False 
-    if not layers_valid:
-        error_layers = ttk.Label(master = layers_error, text = 'Please ensure all inputs are integers greater than 0')
-        error_layers.pack()
-    else:
-        layers_valid = True
-        for widget in layers_error.winfo_children():
-            widget.destroy()
-        
+    
+    for widget in layers_error.winfo_children():
+        widget.destroy()
+    layers_error.update_idletasks()
+
+    for layer in layers:
+        layer_val = layer.get()
+
+        try:
+            layer_val = int(layer_val)
+
+            if layer_val <= 0:
+                error_int_layers = ttk.Label(master = layers_error, text = 'Please enter an integer greater than 0.')
+                error_int_layers.pack()
+
+                layers_valid = False
+                break
+
+        except ValueError:
+            error_layers = ttk.Label(master = layers_error, text = 'Please enter an integer.')
+            error_layers.pack()
+
+            layers_valid = False
+            break
+
     return layers_valid
+
 
 def verify():
 
@@ -123,7 +138,8 @@ def pass_on():
         iterations = int(iterations_entry.get())
         learning_rate = float(learning_entry.get())
         hidden_size = [784] + [int(layer.get()) for layer in layers] + [10]
-        grad_descent(X_train,Y_train,iterations,learning_rate,hidden_size)
+        W, b = grad_descent(X_train,Y_train,iterations,learning_rate,hidden_size)
+        canvas(W,b,root)
 
 
 # Initialises the hidden layer frame 
@@ -136,7 +152,7 @@ hidden_layer_entry = ttk.Entry(master = hidden_layer_pair)
 hidden_layer_button = ttk.Button(master = hidden_layer_pair, text = 'Submit', command = create_layers)
 
 layers_frame = ttk.Frame(master = hidden_layer_frame)
-layers_error = ttk.Frame(master = layers_frame)
+layers_error = ttk.Frame(master = hidden_layer_frame)
 
 # Packs them accordingly
 hidden_layer_frame.pack()
@@ -144,6 +160,7 @@ hidden_layer_label.pack()
 hidden_layer_pair.pack(pady = 5)
 hidden_layer_entry.pack(side = 'left')
 hidden_layer_button.pack(side = 'left')
+
 layers_frame.pack()
 layers_error.pack()
 
@@ -173,4 +190,8 @@ learning_label.pack()
 learning_entry.pack(pady=5)
 learning_error.pack()
 
+submit_layer = ttk.Frame(master = root)
+submit_layer.pack()
+
 root.mainloop()
+
