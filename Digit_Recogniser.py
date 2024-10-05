@@ -20,12 +20,16 @@ X_train = data_train[1:n]
 X_train = X_train / 255.
 _,m_train = X_train.shape
 
+
+
 def init_params(hidden_size): # Base
     # Assuming the 0th index of hidden_size is 784, and the final index is 10
     W = [np.random.rand(hidden_size[i],hidden_size[i-1]) - 0.5 for i in range(1,len(hidden_size))]
     b = [np.random.rand(hidden_size[i],1) - 0.5 for i in range(1,len(hidden_size))]
 
     return W,b
+
+
 
 def ReLU(Zi):
     return np.maximum(Zi,0)
@@ -41,6 +45,9 @@ def one_hot(Y):
     one_hot_Y[np.arange(Y.size), Y] = 1
     one_hot_Y = one_hot_Y.T
     return one_hot_Y
+
+
+
 
 def Forward_Prop(X,W,b):
     Z = [X]
@@ -73,6 +80,9 @@ def Back_Prop(X,Y,A,Z,W,b):
 
     return dW,db
 
+
+
+
 def Update(W,b,dW,db,alpha):
     for i in range(len(W)):
         W[i] -= alpha * dW[i]
@@ -87,10 +97,30 @@ def get_predictions(A2):
 def get_accuracy(predictions, Y):
     return np.sum(predictions == Y) / Y.size
 
-def grad_descent(X,Y,iterations,alpha,hidden_size):
+
+
+
+def calc_momentum(momentum, dk, v_k):
+
+    a = 1 - momentum
+    dk_new = [a * item for item in dk]
+    v_k_prev = [momentum * item for item in v_k]
+    v_k = [v_k_prev[i] + dk_new[i] for i in range(len(dk_new))]
+
+    return v_k
+
+
+
+
+def grad_descent(X,Y,iterations,alpha,hidden_size, momentum = 0):
     W,b = init_params(hidden_size)
     num_iter = 0.1 * iterations
 
+    if momentum:
+        v_w = [np.zeros_like(w) for w in W]
+        v_b = [np.zeros_like(bi) for bi in b]
+
+    # Sets up values for the graph
     fig,ax = plt.subplots()
     train_line, = ax.plot([], [], 'r-', label='Train Accuracy')
     test_line, = ax.plot([], [], 'b-', label='Test Accuracy')
@@ -98,12 +128,19 @@ def grad_descent(X,Y,iterations,alpha,hidden_size):
 
     ax.set_ylim(0,1)
     ax.set_xlim(0,iterations)
-
+    
     plt.ion()
 
+    # Starts the loop
     for i in range(iterations+1):
         Z,A = Forward_Prop(X,W,b)
         dW,db = Back_Prop(X,Y,A,Z,W,b)
+
+        if momentum: 
+            v_w = calc_momentum(momentum, dW, v_w)
+            v_b = calc_momentum(momentum, db, v_b)
+            dW, db = v_w, v_b
+
         W,b = Update(W,b,dW,db,alpha)
 
         if i % (num_iter) == 0:
@@ -114,9 +151,8 @@ def grad_descent(X,Y,iterations,alpha,hidden_size):
             print(f'Accuracy: {train_accuracy}')  
 
             graph(train_accuracy,test_accuracy,i,train_line,test_line,ax)  
-
-    plt.ioff()
-    plt.show()
+    
+    plt.pause(3)
 
     return W,b
 
@@ -127,16 +163,10 @@ def ai_test(X,Y,W,b):
 
     #return [item[0] for item in A[-1]]
 
-W,b = grad_descent(X_train,Y_train,500,0.1,[784,10,10])
-"""
-f = np.array([0 if item % 2 == 0 else 1 for item in range(28)] * 28)
-r = ai_test(f,np.array([0]),W,b)
-q = np.array([0] * 784)
-z = ai_test(q,np.array([0]),W,b)
 
-print(r)
-print(z)
-"""
+
+
+
 def display_test_images(X_test):
     # Check the number of samples in X_test
     num_samples = X_test.shape[1] if X_test.ndim > 1 else 1  # If X_test has 2 dimensions
@@ -183,13 +213,4 @@ def display_test_images(X_test):
     plt.subplots_adjust(top=0.9)  # Adjust to make room for the title
     plt.show()
 
-
-"""
-W,b = grad_descent(X_train,Y_train,1000 ,0.1,[784,10,10])
-_,A = Forward_Prop(X_test,W,b)
-z = get_predictions(A[-1])
-for i in range(len(z)):
-    print(f'{z[i],Y_test[i]}')
-# Example usage:
-display_test_images(X_test)
-"""
+W,b = grad_descent(X_train,Y_train,100,0.3,[784,10])

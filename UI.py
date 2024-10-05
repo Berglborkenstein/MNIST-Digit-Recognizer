@@ -9,8 +9,7 @@ root.title("Hello")
 root.geometry("500x400")
 
 
-def create_layers():
-        
+def create_layers():   
 
     # Clears the frame of any previous entries
     for widget in layers_frame.winfo_children():
@@ -44,6 +43,12 @@ def create_layers():
     else:
         error = ttk.Label(master = layers_frame, text = 'Please enter an integer greater than 0')
         error.pack()
+
+
+
+
+
+
 
 def valid_iterations():
     iterations_valid = False
@@ -117,7 +122,6 @@ def valid_layers():
 
     return layers_valid
 
-
 def verify():
 
     iterations_valid = valid_iterations()
@@ -130,6 +134,11 @@ def verify():
         return True
     else:
         return False
+
+
+
+
+
 
 
 def pass_on():

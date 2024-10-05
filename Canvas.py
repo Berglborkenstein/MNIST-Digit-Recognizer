@@ -4,9 +4,6 @@ import numpy as np
 from Digit_Recogniser import Forward_Prop, grad_descent, X_train, Y_train
 from PIL import Image
 
-    # Canvas needs to have 28x28 'pixels'
-    # Needs to have a paint and erase
-    # Needs to be set up that only 
 def canvas(W,b,parent):
     pixel_size = 20
     canvas_size = pixel_size * 28
