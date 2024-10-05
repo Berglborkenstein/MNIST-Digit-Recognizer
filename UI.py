@@ -122,21 +122,58 @@ def valid_layers():
 
     return layers_valid
 
+def valid_momentum():
+    momentum_valid = False
+
+    for widget in momentum_error.winfo_children():
+        widget.destroy()
+    momentum_error.update_idletasks()
+
+    momentum = momentum_entry.get()
+    try:
+        momentum = float(momentum)
+    except ValueError:
+        error_momentum = ttk.Label(master = momentum_error, text = 'Please enter a number')
+        error_momentum.pack()
+        return False
+    
+    if momentum < 0:
+        error_neg_momentum = ttk.Label(master = momentum_error, text = 'The number you enter must be greater than or equal to 0')
+        error_neg_momentum.pack()
+    else:
+        momentum_valid = True
+    
+    return momentum_valid
+
+def valid_dropout():
+    dropout_valid = False
+
+    for widget in dropout_error.winfo_children():
+        widget.destroy()
+    dropout_error.update_idletasks()
+
+    dropout = dropout_entry.get()
+    try:
+        dropout = float(dropout)
+    except ValueError:
+        error_dropout = ttk.Label(master = dropout_error, text = 'Please enter a number')
+        error_dropout.pack()
+        return False
+    
+    if dropout < 0 or dropout > 1:
+        error_neg_dropout = ttk.Label(master = dropout_error, text = 'The number you enter must be between 0 and 1')
+        error_neg_dropout.pack()
+    else:
+        dropout_valid = True
+    
+    return dropout_valid
+
 def verify():
 
-    iterations_valid = valid_iterations()
-    
-    learning_valid = valid_learning()
-
-    layers_valid = valid_layers()
-
-    if layers_valid and learning_valid and iterations_valid:
+    if valid_iterations() and valid_learning() and valid_layers() and valid_momentum() and valid_dropout():
         return True
     else:
         return False
-
-
-
 
 
 
@@ -146,8 +183,9 @@ def pass_on():
     if verify():
         iterations = int(iterations_entry.get())
         learning_rate = float(learning_entry.get())
+        momentum = float(momentum_entry.get())
         hidden_size = [784] + [int(layer.get()) for layer in layers] + [10]
-        W, b = grad_descent(X_train,Y_train,iterations,learning_rate,hidden_size)
+        W, b = grad_descent(X_train,Y_train,iterations,learning_rate,hidden_size,momentum)
         canvas(W,b,root)
 
 
@@ -198,6 +236,32 @@ learning_frame.pack()
 learning_label.pack()
 learning_entry.pack(pady=5)
 learning_error.pack()
+
+
+# Initialises the momentum frame and entry
+momentum_frame = ttk.Frame(master = root)
+momentum_label = ttk.Label(master = momentum_frame, text = 'Please enter the momentum of the AI:', font = 'Calibri 20')
+momentum_entry = ttk.Entry(master = momentum_frame)
+momentum_error = ttk.Frame(master = momentum_frame)
+
+# Packs the momentum frame
+momentum_frame.pack()
+momentum_label.pack()
+momentum_entry.pack(pady = 5)
+momentum_error.pack()
+
+
+# Initialises the dropout frame and entry
+dropout_frame = ttk.Frame(master = root)
+dropout_label = ttk.Label(master = dropout_frame, text = 'Please enter the dropout probability of the AI:', font = 'Calibri 20')
+dropout_entry = ttk.Entry(master = dropout_frame)
+dropout_error = ttk.Frame(master = dropout_frame)
+
+# Packs the dropout frame
+dropout_frame.pack()
+dropout_label.pack()
+dropout_entry.pack(pady = 5)
+dropout_error.pack()
 
 submit_layer = ttk.Frame(master = root)
 submit_layer.pack()

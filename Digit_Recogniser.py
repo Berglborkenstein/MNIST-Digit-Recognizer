@@ -49,18 +49,25 @@ def one_hot(Y):
 
 
 
-def Forward_Prop(X,W,b):
+def Forward_Prop(X,W,b,dropout):
     Z = [X]
     A = [X]
+    dropout_masks = []
 
     for i in range(len(W)):
         Z.append(W[i].dot(A[i]) + b[i])
-        A.append(ReLU(Z[i+1]))
-    
-    A[-1] = softmax(Z[-1])
-    return Z,A
+        A_current = ReLU(Z[i+1])
 
-def Back_Prop(X,Y,A,Z,W,b):
+        mask = [1 if np.random.random() > dropout else 0 for item in range(len(A_current))]
+        A_new = [(A_current[i] * mask[i])/(1 - dropout) for i in range(len(A_current))]
+        
+        A.append(A_new)
+        dropout_masks.append(mask)
+
+    A[-1] = softmax(Z[-1])
+    return Z,A,dropout_masks
+
+def Back_Prop(X,Y,A,Z,W,b,dropout,dropout_masks):
     one_hot_y = one_hot(Y)
     q = Y.size
 
@@ -72,7 +79,13 @@ def Back_Prop(X,Y,A,Z,W,b):
     dZ[0] = X
 
     for i in range(len(dZ) - 2, 0, -1):
-        dZ[i] = W[i].T.dot(dZ[i+1]) * deriv_ReLU(Z[i])
+        dZ_current = W[i].T.dot(dZ[i+1]) * deriv_ReLU(Z[i])
+
+        if dropout_masks:
+            mask  = dropout_masks[i-1]
+            dZ_current = [(dZ_current[j] * mask[j])/(1 - dropout) for j in range(dZ_current)]
+
+            dZ[i] = dZ_current
 
     for i in range(len(W)):
         dW[i] = 1 / q * dZ[i+1].dot(A[i].T)
@@ -112,7 +125,8 @@ def calc_momentum(momentum, dk, v_k):
 
 
 
-def grad_descent(X,Y,iterations,alpha,hidden_size, momentum = 0):
+
+def grad_descent(X,Y,iterations,alpha,hidden_size, momentum = 0, dropout = 0):
     W,b = init_params(hidden_size)
     num_iter = 0.1 * iterations
 
@@ -133,8 +147,8 @@ def grad_descent(X,Y,iterations,alpha,hidden_size, momentum = 0):
 
     # Starts the loop
     for i in range(iterations+1):
-        Z,A = Forward_Prop(X,W,b)
-        dW,db = Back_Prop(X,Y,A,Z,W,b)
+        Z,A,dropout_masks = Forward_Prop(X,W,b,dropout)
+        dW,db = Back_Prop(X,Y,A,Z,W,b,dropout,dropout_masks)
 
         if momentum: 
             v_w = calc_momentum(momentum, dW, v_w)
@@ -147,7 +161,7 @@ def grad_descent(X,Y,iterations,alpha,hidden_size, momentum = 0):
             print("Iteration: ", i)
             predictions = get_predictions(A[-1])
             train_accuracy = get_accuracy(predictions, Y)
-            test_accuracy = ai_test(X_test,Y_test,W,b)
+            test_accuracy = ai_test(X_test,Y_test,W,b,dropout)
             print(f'Accuracy: {train_accuracy}')  
 
             graph(train_accuracy,test_accuracy,i,train_line,test_line,ax)  
@@ -156,8 +170,8 @@ def grad_descent(X,Y,iterations,alpha,hidden_size, momentum = 0):
 
     return W,b
 
-def ai_test(X,Y,W,b):
-    _,A = Forward_Prop(X,W,b)
+def ai_test(X,Y,W,b,dropout):
+    _,A,_ = Forward_Prop(X,W,b,dropout)
     predictions = get_predictions(A[-1])
     return get_accuracy(predictions,Y)
 
@@ -213,4 +227,4 @@ def display_test_images(X_test):
     plt.subplots_adjust(top=0.9)  # Adjust to make room for the title
     plt.show()
 
-W,b = grad_descent(X_train,Y_train,100,0.3,[784,10])
+W,b = grad_descent(X_train,Y_train,100,0.3,[784,10],dropout = 0.4)
