@@ -1,7 +1,8 @@
 import tkinter as tk
 from tkinter import ttk
 from Digit_Recogniser import grad_descent, X_train,Y_train
-from Canvas import canvas
+from Pixel_Canvas import canvas
+
 
 
 root = tk.Tk()
@@ -43,8 +44,6 @@ def create_layers():
     else:
         error = ttk.Label(master = layers_frame, text = 'Please enter an integer greater than 0')
         error.pack()
-
-
 
 
 
@@ -130,6 +129,9 @@ def valid_momentum():
     momentum_error.update_idletasks()
 
     momentum = momentum_entry.get()
+
+    if momentum == "":
+        return True
     try:
         momentum = float(momentum)
     except ValueError:
@@ -153,6 +155,8 @@ def valid_dropout():
     dropout_error.update_idletasks()
 
     dropout = dropout_entry.get()
+    if dropout == "":
+        return True
     try:
         dropout = float(dropout)
     except ValueError:
@@ -181,12 +185,20 @@ def verify():
 def pass_on():
 
     if verify():
+        print("YES")
         iterations = int(iterations_entry.get())
         learning_rate = float(learning_entry.get())
-        momentum = float(momentum_entry.get())
+        momentum = 0 if momentum_entry.get() == "" else float(momentum_entry.get())
+        dropout = 0 if dropout_entry.get() == "" else float(dropout_entry.get())
         hidden_size = [784] + [int(layer.get()) for layer in layers] + [10]
-        W, b = grad_descent(X_train,Y_train,iterations,learning_rate,hidden_size,momentum)
-        canvas(W,b,root)
+        W, b = grad_descent(X_train,Y_train,iterations,learning_rate,hidden_size,momentum,dropout)
+        canvas(W,b,root,dropout)
+"""
+        canvas_window = tk.Toplevel(root)
+        canvas_window.title('Canvas')
+        canvas_window.geometry(f'{530}x{360}')
+        app = Canvas(canvas_window, W, b, dropout)
+"""
 
 
 # Initialises the hidden layer frame 

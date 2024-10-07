@@ -49,7 +49,7 @@ def one_hot(Y):
 
 
 
-def Forward_Prop(X,W,b,dropout):
+def Forward_Prop(X,W,b,dropout = 0):
     Z = [X]
     A = [X]
     dropout_masks = []
@@ -83,16 +83,15 @@ def Back_Prop(X,Y,A,Z,W,b,dropout,dropout_masks):
 
         if dropout_masks:
             mask  = dropout_masks[i-1]
-            dZ_current = [(dZ_current[j] * mask[j])/(1 - dropout) for j in range(dZ_current)]
+            dZ_current = [(dZ_current[j] * mask[j])/(1 - dropout) for j in range(len(dZ_current))]
 
-            dZ[i] = dZ_current
+            dZ[i] = np.array(dZ_current)
 
     for i in range(len(W)):
-        dW[i] = 1 / q * dZ[i+1].dot(A[i].T)
+        dW[i] = 1 / q * dZ[i+1].dot(np.array(A[i]).T)
         db[i] = 1 / q * np.sum(dZ[i+1])
 
     return dW,db
-
 
 
 
@@ -227,4 +226,4 @@ def display_test_images(X_test):
     plt.subplots_adjust(top=0.9)  # Adjust to make room for the title
     plt.show()
 
-W,b = grad_descent(X_train,Y_train,100,0.3,[784,10],dropout = 0.4)
+#W,b = grad_descent(X_train,Y_train,100,0.3,[784,10,10],dropout = 0.)

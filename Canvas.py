@@ -2,129 +2,125 @@ import tkinter as tk
 from tkinter import ttk
 import numpy as np
 from Digit_Recogniser import Forward_Prop, grad_descent, X_train, Y_train
-from PIL import Image
+from PIL import Image, ImageDraw, ImageOps
 
-def canvas(W,b,parent):
-    pixel_size = 20
-    canvas_size = pixel_size * 28
+def canvas(W, b, parent, dropout):
+    canvas_size = 560  # Set canvas size to 560x560 for a 20-pixel brush on a 28x28 logical grid
+    brush_radius = 10  # Brush radius to give a more natural stroke
+
+    # Create a PIL image to store canvas drawing
+    pil_image = Image.new('L', (canvas_size, canvas_size), color=255)
+    draw_image = ImageDraw.Draw(pil_image)
 
     canvas_window = tk.Toplevel(parent)
     canvas_window.title('Canvas')
     canvas_window.geometry(f'{canvas_size + 130}x{canvas_size + 60}')
 
     def draw(event):
-        x = event.x // pixel_size
-        y = event.y // pixel_size
+        x, y = event.x, event.y
 
-        for rect,rect_x,rect_y in pixels:
-            if rect_x == x and rect_y == y:
-                update_colour(rect,255)
-            #elif (x,y) in [(rect_x + 1, rect_y), (rect_x - 1, rect_y), (rect_x, rect_y + 1), (rect_x, rect_y - 1)]:
-             #   update_colour(rect,30)
-            #elif (x,y) in [(rect_x + 1, rect_y + 1), (rect_x - 1, rect_y - 1), (rect_x - 1, rect_y + 1), (rect_x + 1, rect_y - 1)]:
-             #   update_colour(rect,20)
-        
-    def update_colour(rect,change):
-        c = digit_canvas.itemcget(rect,'fill')
-        current_colour = hex_to_rgb(c)[0]
-        current_colour = max(current_colour - change, 0)
-        digit_canvas.itemconfig(rect, fill = rgb_to_hex((current_colour,) * 3), outline = rgb_to_hex((current_colour,) * 3))
+        # Draw on the Tkinter canvas
+        digit_canvas.create_oval(x - brush_radius, y - brush_radius, x + brush_radius, y + brush_radius, 
+                                 fill='black', outline='black')
+
+        # Draw on the PIL image
+        draw_image.ellipse([x - brush_radius, y - brush_radius, x + brush_radius, y + brush_radius], fill=0)
 
     def erase(event):
-        x = (event.x // pixel_size) 
-        y = (event.y // pixel_size) 
+        x, y = event.x, event.y
 
-        white = rgb_to_hex((255,)*3)
-        for rect,rect_x,rect_y in pixels:
-            if rect_x == x and rect_y == y:
-                digit_canvas.itemconfig(rect, fill = white, outline = white)
+        # Erase on the Tkinter canvas by drawing a white circle
+        digit_canvas.create_oval(x - brush_radius, y - brush_radius, x + brush_radius, y + brush_radius, 
+                                 fill='white', outline='white')
+
+        # Erase on the PIL image
+        draw_image.ellipse([x - brush_radius, y - brush_radius, x + brush_radius, y + brush_radius], fill=255)
 
     def clear():
-        for item,_,_ in pixels:
-            white = rgb_to_hex((255,)*3)
-            digit_canvas.itemconfig(item, fill = white, outline = white)
+        # Clear the Tkinter canvas
+        digit_canvas.delete("all")
 
-    def pass_to_ai(W,b):
-        X = canvas_to_csv()
-        _,A = Forward_Prop(X,W,b)
+        # Clear the PIL image to pure white
+        draw_image.rectangle([0, 0, canvas_size, canvas_size], fill=255)
+
+    def pass_to_ai(W, b):
+        # Convert the PIL image to 28x28, invert it, and format it as an array
+        resized_image = pil_image.resize((28, 28))
+        inverted_image = ImageOps.invert(resized_image)
+
+        # Convert to numpy array to find the bounding box of the drawn digit
+        np_image = np.array(inverted_image)
+        non_empty_columns = np.where(np_image.min(axis=0) < 255)[0]
+        non_empty_rows = np.where(np_image.min(axis=1) < 255)[0]
+
+        if non_empty_columns.size and non_empty_rows.size:
+            # Calculate the bounding box
+            crop_box = (min(non_empty_columns), min(non_empty_rows),
+                        max(non_empty_columns), max(non_empty_rows))
+            
+            # Crop the image to the bounding box
+            cropped_image = inverted_image.crop(crop_box)
+
+            # Create a new 28x28 image and paste the cropped image at the center
+            centered_image = Image.new('L', (28, 28), color=255)
+            paste_x = (28 - cropped_image.width) // 2
+            paste_y = (28 - cropped_image.height) // 2
+            centered_image.paste(cropped_image, (paste_x, paste_y))
+
+            # Convert the centered image to a grayscale array and normalize
+            grayscale_array = np.array(centered_image).reshape(784, 1) / 255
+        else:
+            # If nothing is drawn, just use the empty image
+            grayscale_array = np.array(inverted_image).reshape(784, 1) / 255
+
+
+        _, A, _ = Forward_Prop(grayscale_array, W, b, dropout)
         estimate = [item[0] for item in A[-1]]
 
         for i in range(10):
             confidences[i].set(estimate[i])
 
-        canvas_window.after(100,lambda: pass_to_ai(W,b))
+        canvas_window.after(1000, lambda: pass_to_ai(W, b))
 
-    def canvas_to_csv():
-        grayscale_canvas = [(1 - hex_to_rgb(digit_canvas.itemcget(item,'fill'))[0] / 255) for item,_,_ in pixels]
-        #display_test_images(np.array(grayscale_canvas))
-        x = (np.array(grayscale_canvas) * 255)
-        #img = Image.fromarray(x.reshape((28,28)).astype(np.uint8),mode = 'L')
-        #img.show()
-        return np.array(grayscale_canvas).reshape(784, 1)
-
-    def rgb_to_hex(rgb):
-        r, g, b = rgb
-        return f'#{r:02x}{g:02x}{b:02x}'
-
-    def hex_to_rgb(hex_color):
-        # Remove the '#' character if it's there
-        hex_color = hex_color.lstrip('#')
-        # Convert the hex string to RGB values
-        r = int(hex_color[0:2], 16)
-        g = int(hex_color[2:4], 16)
-        b = int(hex_color[4:6], 16)
-        
-        return (r, g, b)
-
-    top = ttk.Frame(master = canvas_window)
+    top = ttk.Frame(master=canvas_window)
     top.pack()
 
-    digit_canvas = tk.Canvas(master = top, bg = 'white', width = canvas_size, height = canvas_size)
-    digit_canvas.pack(side = 'left')
+    digit_canvas = tk.Canvas(master=top, bg='white', width=canvas_size, height=canvas_size)
+    digit_canvas.pack(side='left')
 
-    # Draw the initial grid
-    pixels = []
-    for x in range(0, canvas_size, pixel_size):
-        for y in range(0, canvas_size, pixel_size):
-            pixels.append((digit_canvas.create_rectangle(y, x, y + pixel_size, x + pixel_size, outline=rgb_to_hex((255,)*3), fill=rgb_to_hex((255,)*3)),y/pixel_size,x/pixel_size))
-
-    # Bind mouse click and drag to draw
+    # Bind mouse click and drag to draw with a brush
     digit_canvas.bind("<B1-Motion>", draw)
     digit_canvas.bind("<Button-1>", draw)
 
-    digit_canvas.bind("<B3-Motion>",erase)
+    # Bind right-click to erase
+    digit_canvas.bind("<B3-Motion>", erase)
     digit_canvas.bind("<Button-3>", erase)
 
-    # Shows sliders of what the AI believes the answer to be
-    confidence_frame = ttk.Frame(master = top)
+    confidence_frame = ttk.Frame(master=top)
     confidences = [tk.DoubleVar(value=0) for _ in range(10)]
-    frames = [ttk.Frame(master = confidence_frame) for i in range(10)]
-    confidence_bars = [ttk.Progressbar(master = frames[i], variable = confidences[i], maximum = 1, length = 100) for i in range(10)]
-    labels = [ttk.Label(master = frames[i], text = f'{i}:') for i in range(10)]
+    frames = [ttk.Frame(master=confidence_frame) for i in range(10)]
+    confidence_bars = [ttk.Progressbar(master=frames[i], variable=confidences[i], maximum=1, length=100) for i in range(10)]
+    labels = [ttk.Label(master=frames[i], text=f'{i}:') for i in range(10)]
 
-    confidence_frame.pack(side = 'left', padx = 5)
+    confidence_frame.pack(side='left', padx=5)
 
     for i in range(10):
-        confidence = confidence_bars[i]
-        label = labels[i]
         frame = frames[i]
+        label = labels[i]
+        confidence = confidence_bars[i]
 
         frame.pack()
-        label.pack(pady = 5, side = 'left')
-        confidence.pack(pady = 5, padx = 3, side = 'left')
+        label.pack(pady=5, side='left')
+        confidence.pack(pady=5, padx=3, side='left')
 
-    # Initialises and packs the info and clear button at the bottom of the screen
-    bottom_frame = ttk.Frame(master = canvas_window)
-    info_label = ttk.Label(master = bottom_frame, text = 'Right-Click to Erase')
-    info_label_2 = ttk.Label(master = bottom_frame, text = 'Left-Click to Draw')
-    clear_button = ttk.Button(master = canvas_window, text = 'Clear Canvas', command = clear)
+    bottom_frame = ttk.Frame(master=canvas_window)
+    info_label = ttk.Label(master=bottom_frame, text='Right-Click to Erase')
+    info_label_2 = ttk.Label(master=bottom_frame, text='Left-Click to Draw')
+    clear_button = ttk.Button(master=canvas_window, text='Clear Canvas', command=clear)
 
-    bottom_frame.pack(pady = 5)
-    info_label.pack(side = 'left')
-    info_label_2.pack(side = 'left', padx = 10)
+    bottom_frame.pack(pady=5)
+    info_label.pack(side='left')
+    info_label_2.pack(side='left', padx=10)
     clear_button.pack()
 
-    pass_to_ai(W,b)
-
-#W,b = grad_descent(X_train,Y_train,100,0.1,[784,100,10])
-#canvas(W,b)
+    pass_to_ai(W, b)
