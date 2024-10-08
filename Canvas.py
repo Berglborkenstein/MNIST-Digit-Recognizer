@@ -80,7 +80,7 @@ def canvas(W, b, parent, dropout):
         for i in range(10):
             confidences[i].set(estimate[i])
 
-        canvas_window.after(1000, lambda: pass_to_ai(W, b))
+        canvas_window.after(100, lambda: pass_to_ai(W, b))
 
     top = ttk.Frame(master=canvas_window)
     top.pack()

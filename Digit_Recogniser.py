@@ -127,7 +127,7 @@ def calc_momentum(momentum, dk, v_k):
 
 def grad_descent(X,Y,iterations,alpha,hidden_size, momentum = 0, dropout = 0):
     W,b = init_params(hidden_size)
-    num_iter = 0.1 * iterations
+    num_iter = 0.01 * iterations
 
     if momentum:
         v_w = [np.zeros_like(w) for w in W]

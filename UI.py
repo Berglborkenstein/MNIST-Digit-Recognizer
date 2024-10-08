@@ -1,7 +1,7 @@
 import tkinter as tk
 from tkinter import ttk
 from Digit_Recogniser import grad_descent, X_train,Y_train
-from Pixel_Canvas import canvas
+from Canvas import canvas
 
 
 
