@@ -20,7 +20,31 @@ X_train = data_train[1:n]
 X_train = X_train / 255.
 _,m_train = X_train.shape
 
-
+def batches(batch_size):
+    full_size = m_train  # Total number of training examples
+    num_batches = full_size // batch_size  # Number of full batches
+    
+    # Shuffle the data
+    permutation = np.random.permutation(full_size)
+    shuffled_X = X_train[:, permutation]
+    shuffled_Y = Y_train[permutation]
+    
+    # Generate batches
+    for i in range(num_batches):
+        start = i * batch_size
+        end = start + batch_size
+        
+        # Get the batch of X and Y
+        X_batch = shuffled_X[:, start:end]
+        Y_batch = shuffled_Y[start:end]
+        
+        yield X_batch, Y_batch  # Return the batch
+    
+    # Handle the last batch if the total number of samples isn't divisible by batch_size
+    if full_size % batch_size != 0:
+        X_batch = shuffled_X[:, num_batches * batch_size:]
+        Y_batch = shuffled_Y[num_batches * batch_size:]
+        yield X_batch, Y_batch
 
 def init_params(hidden_size): # Base
     # Assuming the 0th index of hidden_size is 784, and the final index is 10
@@ -110,8 +134,6 @@ def get_accuracy(predictions, Y):
     return np.sum(predictions == Y) / Y.size
 
 
-
-
 def calc_momentum(momentum, dk, v_k):
 
     a = 1 - momentum
@@ -127,7 +149,7 @@ def calc_momentum(momentum, dk, v_k):
 
 def grad_descent(X,Y,iterations,alpha,hidden_size, momentum = 0, dropout = 0):
     W,b = init_params(hidden_size)
-    num_iter = 0.01 * iterations
+    num_iter = 0.1 * iterations
 
     if momentum:
         v_w = [np.zeros_like(w) for w in W]
@@ -165,6 +187,13 @@ def grad_descent(X,Y,iterations,alpha,hidden_size, momentum = 0, dropout = 0):
 
             graph(train_accuracy,test_accuracy,i,train_line,test_line,ax)  
     
+    for i in range(len(W)):
+        W_current = W[i]
+        b_current = b[i]
+
+        np.save(f'Weight{i}.npy',W_current)
+        np.save(f'Bias{i}.npy',b_current)
+
     plt.pause(3)
 
     return W,b
@@ -226,4 +255,4 @@ def display_test_images(X_test):
     plt.subplots_adjust(top=0.9)  # Adjust to make room for the title
     plt.show()
 
-#W,b = grad_descent(X_train,Y_train,100,0.3,[784,10,10],dropout = 0.)
+W,b = grad_descent(X_train,Y_train,1000,0.01,[784,128,10],momentum = 0.7, dropout = 0.3)

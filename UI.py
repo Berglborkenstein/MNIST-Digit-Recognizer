@@ -1,7 +1,9 @@
 import tkinter as tk
 from tkinter import ttk
 from Digit_Recogniser import grad_descent, X_train,Y_train
-from Canvas import canvas
+import shared_params
+from Im_going_insane import canvas
+import os
 
 
 
@@ -192,7 +194,13 @@ def pass_on():
         dropout = 0 if dropout_entry.get() == "" else float(dropout_entry.get())
         hidden_size = [784] + [int(layer.get()) for layer in layers] + [10]
         W, b = grad_descent(X_train,Y_train,iterations,learning_rate,hidden_size,momentum,dropout)
-        canvas(W,b,root,dropout)
+
+        shared_params.set_params(W,b,dropout)
+        print(shared_params.Wi)
+        print(W)
+        print(shared_params.get_params())
+
+        canvas()
 """
         canvas_window = tk.Toplevel(root)
         canvas_window.title('Canvas')
